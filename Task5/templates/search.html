@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+    <body>
+        <div>
+            <form action="/make_search/" method="get">
+                <label for="input_txt">Text for find</label>
+                <input type="text" id="input_txt" name="inputtext" placeholder="Text for find">
+                <button type="submit">Find</button>
+            </form>
+        </div>
+        <div id='info_section'>
+        <h3>Result of search</h3>
+            {% for tmp_data in data %}
+                <p>{{ tmp_data }}</p>
+            {% endfor %}
+        </div>
+    </body>
+</html>
