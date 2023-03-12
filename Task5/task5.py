@@ -118,9 +118,9 @@ def make_search():
         text = request.values.get('inputtext')
         splitted_text = text.split(' ')
         if len(splitted_text) == 1:
-            find_word(text)
-            general_output = result_index[text]
-            print(general_output)
+            lemma_word = nlp(text)[0].lemma_
+            find_word(lemma_word)
+            general_output = result_index[lemma_word]
         elif len(splitted_text) == 0:
             return 'Please! Write smth...'
         else:
