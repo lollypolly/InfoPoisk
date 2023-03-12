@@ -114,6 +114,7 @@ def search():
 def make_search():
     general_output = []
     result_urls = []
+    new_splitted_text = []
     if request.method == "GET":
         text = request.values.get('inputtext')
         splitted_text = text.split(' ')
@@ -125,13 +126,20 @@ def make_search():
             return 'Please! Write smth...'
         else:
             for i in range(0, len(splitted_text)):
+                if splitted_text[i] == 'AND' or splitted_text[i] == 'OR' or splitted_text[i] == 'NOT':
+                    new_splitted_text.append(splitted_text[i])
+                else:
+                    new_splitted_text.append(nlp(splitted_text[i])[0].lemma_)
+
+            for i in range(0, len(splitted_text)):
                 if splitted_text[i] == 'AND' or splitted_text[i] == 'OR':
                     i += 1
                 elif splitted_text[i] == 'NOT':
                     i += 2
                 else:
                     find_word(nlp(splitted_text[i])[0].lemma_)
-            general_output = list(analyze_input(result_index, splitted_text))
+
+            general_output = list(analyze_input(result_index, new_splitted_text))
         for index in general_output:
             result_urls.append(str(dict_index[index]).replace('[', '').replace(']', '').replace('\\n', '').replace("'", ""))
             print(str(dict_index[index]).replace('[', '').replace(']', '').replace('\\n', ''))
