@@ -1,16 +1,19 @@
 from flask import Flask, render_template, request
 import ru_core_news_md
 
+home_dir = '/home/rinat.r.ahmethanov/PycharmProjects/InfoPoisk/'  # '/Users/rinat.r.ahmethanov/PycharmProjects/InfoPoisk/
 nlp = ru_core_news_md.load()
 dict_lemma_index = {}
 dict_lemma = {}
 dict_idf = {}
 dict_index = {}
+dict_index_idf = {}
 result_index = {}
+result_dict = {}
 
 
 def read_file_lemmas(tmp_dict, name_of_file):
-    with open('/Users/rinat.r.ahmethanov/PycharmProjects/InfoPoisk/Lemmas_And_Tokens/' + name_of_file) as f:
+    with open(home_dir + 'Lemmas_And_Tokens/' + name_of_file) as f:
         for line in f:
             (key, val) = line.split(':')
             for s in val.split(','):
@@ -22,18 +25,18 @@ def read_file_lemmas(tmp_dict, name_of_file):
 
 
 def read_idf(tmp_dict, name_of_file):
-    with open('/Users/rinat.r.ahmethanov/PycharmProjects/InfoPoisk/Tf-Idf/' + name_of_file) as f:
+    with open(home_dir + 'Tf-Idf/' + name_of_file) as f:
         for line in f:
-            (key, val) = line.split(' ')
+            (key, val1, val2) = line.strip().split(' ')
             if key in tmp_dict:
-                tmp_dict[key].append(val.split(' ')[0])
+                tmp_dict[key].append(val1)
             else:
-                tmp_dict[key] = [val.split(' ')[0]]
-            tmp_dict[key].append(val.split(' ')[1])
+                tmp_dict[key] = [val1]
+            tmp_dict[key].append(val2)
 
 
 def read_index_txt():
-    with open('/Users/rinat.r.ahmethanov/PycharmProjects/InfoPoisk/indexes/index.txt') as f:
+    with open(home_dir + 'indexes/index.txt') as f:
         for line in f:
             (key, val) = line.split(' - ')
             dict_index[key] = [val]
@@ -69,7 +72,7 @@ def analyze_input(all_index, splitted_text):
                 print('all_index[splitted_text[i - 1]]  ' + str(all_index[splitted_text[i - 1]]) + '\n')
                 print('all_index[splitted_text[i + 1]]   ' + str(all_index[splitted_text[i + 1]]) + '\n')
                 prev_val.update(list(set(all_index[splitted_text[i - 1]]) | set(all_index[splitted_text[i + 1]])))
-        elif splitted_text[i] == 'NOT' and splitted_text[i+1] == 'AND':
+        elif splitted_text[i] == 'NOT' and splitted_text[i + 1] == 'AND':
             if len(prev_val) != 0:
                 print('prev_val  ' + str(prev_val) + '\n')
                 print('all_index[splitted_text[i + 1]]    ' + str(all_index[splitted_text[i + 2]]) + '\n')
@@ -78,7 +81,7 @@ def analyze_input(all_index, splitted_text):
                 print('all_index[splitted_text[i - 1]]  ' + str(all_index[splitted_text[i - 2]]) + '\n')
                 print('all_index[splitted_text[i + 1]]   ' + str(all_index[splitted_text[i + 2]]) + '\n')
                 prev_val.update(list(set(all_index[splitted_text[i - 2]]) - set(all_index[splitted_text[i + 2]])))
-        elif splitted_text[i] == 'NOT' and splitted_text[i+1] == 'OR':
+        elif splitted_text[i] == 'NOT' and splitted_text[i + 1] == 'OR':
             tmp_list = range(1, 101)
             reversed_prev_val = list(set(tmp_list) - set(prev_val))
             if len(prev_val) != 0:
@@ -114,12 +117,16 @@ def search():
 def make_search():
     general_output = []
     result_urls = []
+    sorted_dict_url = {}
+    dict_index_idf = {}
+
+    text = request.values.get('inputtext')
+    splitted_text = text.split(' ')
     new_splitted_text = []
     if request.method == "GET":
-        text = request.values.get('inputtext')
-        splitted_text = text.split(' ')
         if len(splitted_text) == 1:
             lemma_word = nlp(text)[0].lemma_
+            new_splitted_text.append(lemma_word)
             find_word(lemma_word)
             general_output = result_index[lemma_word]
         elif len(splitted_text) == 0:
@@ -141,8 +148,20 @@ def make_search():
 
             general_output = list(analyze_input(result_index, new_splitted_text))
         for index in general_output:
-            result_urls.append(str(dict_index[index]).replace('[', '').replace(']', '').replace('\\n', '').replace("'", ""))
-            print(str(dict_index[index]).replace('[', '').replace(']', '').replace('\\n', ''))
+            tmp_dict_idf = {}
+            for word in new_splitted_text:
+                if word != 'OR' and word != 'AND' and word != 'NOT':
+                    read_idf(tmp_dict_idf, 'lemma-' + index + '.txt')
+                    if index in dict_index_idf.keys():
+                        dict_index_idf[index] += float(tmp_dict_idf[word][1])
+                    else:
+                        dict_index_idf[index] = float(tmp_dict_idf[word][1])
+            sorted_dict_url = sorted(dict_index_idf.items(), key=lambda x: x[1], reverse=True)
+        print(sorted_dict_url)
+        for keys in sorted_dict_url:
+            tmp_name_index = keys[0]
+            url_to_out = str(dict_index[tmp_name_index]).replace('[', '').replace(']', '').replace('\\n', '').replace("'", "")
+            result_urls.append(url_to_out)
 
     return render_template('search.html', data=result_urls)
 
